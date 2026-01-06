@@ -1,11 +1,36 @@
-services:
-  web-app:
-    build:
-      context: .
-    ports:
-      - '8000:8000'
-    volumes:
-      - ./service:/service
+version: '3.8'  # Версия синтаксиса Docker Compose
 
-    command: >
-      sh -c 'python manage.py runserver 0.0.0.0:8000'
+services:  # Определение сервисов/контейнеров
+  web-app:  # Сервис Django-приложения
+    build:  # Сборка образа из Dockerfile
+      context: .  # Текущая директория как контекст сборки
+    ports:  # Проброс портов: хост:контейнер
+      - '8000:8000'  # Внешний порт 8000 на хосте → порт 8000 в контейнере
+    volumes:  # Монтирование томов/директорий
+      - ./service:/service  # Локальная папка service → /service в контейнере
+    environment:  # Переменные окружения для контейнера
+      - DB_NAME=testdb  # Имя базы данных
+      - DB_USER=postgres  # Пользователь базы данных
+      - DB_PASSWORD=Canada77  # Пароль базы данных
+      - DB_HOST=database  # Хост БД (имя сервиса в docker-compose)
+      - DB_PORT=5432  # Порт базы данных
+    depends_on:  # Зависимости запуска (порядок инициализации)
+      - database  # Сначала запустить сервис database
+    command: >  # Команда запуска контейнера (многострочная)
+      sh -c 'python manage.py migrate --noinput &&  # Применить миграции без запросов
+             python manage.py createsuperuser --noinput --username admin --email admin@example.com || true &&  # Создать суперпользователя (игнорировать ошибки если уже существует)
+             python manage.py runserver 0.0.0.0:8000'  # Запустить Django-сервер
+
+  database:  # Сервис PostgreSQL базы данных
+    image: postgres:14.6-alpine  # Использовать готовый образ PostgreSQL
+    environment:  # Переменные окружения для инициализации БД
+      - POSTGRES_DB=testdb  # Создать базу данных при первом запуске
+      - POSTGRES_USER=postgres  # Создать пользователя БД
+      - POSTGRES_PASSWORD=Canada77  # Установить пароль пользователя
+    volumes:  # Постоянное хранение данных
+      - postgres_data:/var/lib/postgresql/data  # Именованный том для хранения данных БД
+    ports:  # Проброс портов для доступа к БД с хоста
+      - '5432:5432'  # Внешний доступ к PostgreSQL на порту 5432
+
+volumes:  # Определение томов для хранения данных
+  postgres_data:  # Именованный том для данных PostgreSQL (сохраняется между перезапусками)

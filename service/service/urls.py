@@ -13,9 +13,24 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+# service/urls.py
+
 from django.contrib import admin
 from django.urls import path
+from django.http import HttpResponse
+
+def home_view(request):
+    return HttpResponse("""
+    <h1>Django сервер работает!</h1>
+    <p>Сервер запущен успешно.</p>
+    <p>База данных: {}</p>
+    <ul>
+        <li><a href="/admin/">Админка</a></li>
+        <li><a href="/api/">API</a></li>
+    </ul>
+    """.format("Подключена" if True else "Не подключена"))
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', home_view, name='home'),
 ]
