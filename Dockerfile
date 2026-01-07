@@ -1,35 +1,36 @@
+# Базовый образ: Python 3.9 на Alpine Linux (легковесный дистрибутив)
 FROM python:3.9-alpine3.16
 
-# Устанавливаем системные зависимости
+# Установка системных зависимостей для сборки Python-пакетов
 RUN apk update && apk add --no-cache \
-    postgresql-libs \
-    gcc \
-    musl-dev \
-    postgresql-dev \
-    python3-dev \
-    libffi-dev \
-    openssl-dev
+    postgresql-libs \           # Клиентские библиотеки PostgreSQL
+    gcc \                       # Компилятор C
+    musl-dev \                  # Стандартная библиотека C
+    postgresql-dev \            # Заголовки для PostgreSQL (нужны для psycopg2)
+    python3-dev \               # Заголовки Python для компиляции
+    libffi-dev \                # Для криптографических пакетов
+    openssl-dev                 # Для SSL/TLS
 
-# Копируем и устанавливаем зависимости
+# Копируем файл зависимостей и устанавливаем Python-пакеты
 COPY requirements.txt /temp/requirements.txt
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r /temp/requirements.txt
+RUN pip install --upgrade pip && \                        # Обновляем pip до последней версии
+    pip install --no-cache-dir -r /temp/requirements.txt  # Устанавливаем зависимости без кэша
 
-# Очистка для уменьшения размера образа
+# Удаляем ненужные зависимости для уменьшения размера образа
 RUN apk del gcc musl-dev postgresql-dev python3-dev libffi-dev openssl-dev && \
-    rm -rf /var/cache/apk/*
+    rm -rf /var/cache/apk/*                     # Очищаем кэш пакетов
 
-# Копируем приложение
+# Копируем код приложения в контейнер
 COPY service /service
-WORKDIR /service
+WORKDIR /service                                # Устанавливаем рабочую директорию
 
-# Создаем пользователя
-RUN adduser -D -H service-user && \
-    chown -R service-user:service-user /service
+# Создаем непривилегированного пользователя для безопасности
+RUN adduser -D -H service-user && \             # Создаем пользователя без пароля
+    chown -R service-user:service-user /service # Меняем владельца файлов
 
-USER service-user
+USER service-user                               # Переключаемся на созданного пользователя
 
-EXPOSE 8000
+EXPOSE 8000                                     # Объявляем порт для доступа к приложению
 
-# Команда по умолчанию
+# Команда по умолчанию при запуске контейнера
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
